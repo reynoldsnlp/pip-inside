@@ -9,7 +9,9 @@ from warnings import warn
 
 try:
     from pip._internal.commands import InstallCommand
+    from pip._vendor.distlib.database import DistributionPath
     install_cmd = InstallCommand()
+    dist_path = DistributionPath()
 except ModuleNotFoundError:
     raise ModuleNotFoundError('Please install pip for the current '
                               'interpreter: (%s).' % sys.executable)
@@ -99,11 +101,25 @@ def install(*args, **kwargs):
                     cli_args.append(v)
         # Positional arguments are passed directly as CLI arguments
         cli_args += args
+
     # use pip internals to isolate package names
     opt_dict, targets = install_cmd.parse_args(cli_args)
     assert targets[:2] == ['pip', 'install']
-    targets = set(targets[2:])
-    already_loaded = {n: mod for n, mod in sys.modules.items() if n in targets}
+    targets = targets[2:]
+    target_origins = set()
+    for t in targets:
+        if t in sys.modules:
+            target_origins.add(sys.modules[t].__spec__.origin)
+    print('target_origins', target_origins)
+    dist_info = [dist_path.get_distribution(dist_name)
+                 for dist_name in targets]
+    paths = set()
+    for project in dist_info:
+        if project is not None:
+            for path, __, __ in project.list_installed_files():
+                paths.add(os.path.join(os.path.dirname(project.path), path))
+    print('paths', paths)
+    already_loaded = target_origins.intersection(paths)
     print('Trying  ', ' '.join(cli_args), '  ...')
     result = check_call([sys.executable, "-m", *cli_args])
     print(result)
