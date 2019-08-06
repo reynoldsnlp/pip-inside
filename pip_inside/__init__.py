@@ -1,10 +1,8 @@
 from glob import glob
 import os
-from pprint import pprint
 import shlex
 import six
-from subprocess import run
-from subprocess import PIPE
+from subprocess import check_call
 import sys
 from warnings import warn
 
@@ -65,28 +63,29 @@ def install(*args, **kwargs):
     # use pip internals to isolate package names
     _, targets = install_cmd.parse_args(cli_args)  # _ is a dict of options
     assert targets[:2] == ['pip', 'install']
+    target_providers = [d.name
+                        for t in targets[2:]
+                        for d in dist_path.get_distributions()
+                        if bytes(t, 'utf8') in d.modules]
     target_origins = set()
-    for t in targets:
+    for t in target_providers:
         if t in sys.modules:
             target_origins.add(sys.modules[t].__spec__.origin)
-    print('target_origins', target_origins)
-    dist_info = [dist_path.get_distribution(dist_name)
-                 for dist_name in targets]
+    print('target_origins', target_origins, file=sys.stderr)
+    dists = [dist_path.get_distribution(d) for d in target_providers]
     paths = set()
-    for project in dist_info:
+    for project in dists:
         if project is not None:
-            for path, __, __ in project.list_installed_files():
+            for path, _, _ in project.list_installed_files():
                 paths.add(os.path.join(os.path.dirname(project.path), path))
-    print('paths', paths)
+    print('paths:', paths, file=sys.stderr)
     already_loaded = target_origins.intersection(paths)
-    print('Trying  ', ' '.join(cli_args), '  ...')
+    print('Trying  ', ' '.join(cli_args), '  ...', file=sys.stderr)
     cli_cmd = [sys.executable, "-m"] + cli_args
     result = check_call(cli_cmd)
-
     if result == 0 and already_loaded:
-        print('The following modules were already loaded. You may need to '
-              'restart python to see changes: ')
-        pprint(already_loaded)
+        warn('The following modules were already loaded. You may need to '
+             'restart python to see changes:  ' + ', '.join(already_loaded))
     return result
 
 

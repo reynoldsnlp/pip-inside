@@ -41,11 +41,18 @@ def test_build_install_cmd_underscores():
 def test_install_simplewheel():
     wheel_path = 'tests/data/packages/'
     wheel1 = wheel_path + 'simplewheel-1.0-py2.py3-none-any.whl'
-    wheel2 = wheel_path + 'simplewheel-2.0-py2.py3-none-any.whl'
     assert install(wheel1) == 0
-    assert install(wheel2) == 0
     # the following tests were suggested by @ncoghlan
     # install("pip install --target /tmp//target_dir_without_spaces ''")
     # install("pip install --target '/tmp//target dir with spaces' ''")
     # install(wheel1, target="/tmp//")
     # install(wheel2, target="/tmp//", upgrade=True)
+
+
+def test_already_loaded():
+    wheel_path = 'tests/data/packages/'
+    wheel1 = wheel_path + 'simplewheel-1.0-py2.py3-none-any.whl'
+    wheel2 = wheel_path + 'simplewheel-2.0-py2.py3-none-any.whl'
+    assert install(wheel1) == 0
+    import simplewheel  # noqa: F401
+    assert install(wheel2) == 0
