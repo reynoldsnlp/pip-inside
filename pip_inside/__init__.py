@@ -78,14 +78,13 @@ def install(*args, **kwargs):
         if project is not None:
             for path, _, _ in project.list_installed_files():
                 paths.add(os.path.join(os.path.dirname(project.path), path))
-    print('paths:', paths, file=sys.stderr)
     already_loaded = target_origins.intersection(paths)
     print('Trying  ', ' '.join(cli_args), '  ...', file=sys.stderr)
     cli_cmd = [sys.executable, "-m"] + cli_args
     result = check_call(cli_cmd)
     if result == 0 and already_loaded:
-        warn('The following modules were already loaded. You may need to '
-             'restart python to see changes:  ' + ', '.join(already_loaded))
+        warn('WARNING! The following modules were already loaded. Restart '
+             'python to see changes:  ' + repr(already_loaded), UserWarning)
     return result
 
 

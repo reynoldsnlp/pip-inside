@@ -1,3 +1,5 @@
+import pytest
+
 from pip_inside import _build_install_cmd
 from pip_inside import install
 
@@ -41,7 +43,10 @@ def test_build_install_cmd_underscores():
 def test_install_simplewheel():
     wheel_path = 'tests/data/packages/'
     wheel1 = wheel_path + 'simplewheel-1.0-py2.py3-none-any.whl'
-    assert install(wheel1) == 0
+    try:
+        assert install(wheel1) == 0
+    except EnvironmentError:
+        assert install(wheel1, user=True) == 0
     # the following tests were suggested by @ncoghlan
     # install("pip install --target /tmp//target_dir_without_spaces ''")
     # install("pip install --target '/tmp//target dir with spaces' ''")
@@ -53,6 +58,41 @@ def test_already_loaded():
     wheel_path = 'tests/data/packages/'
     wheel1 = wheel_path + 'simplewheel-1.0-py2.py3-none-any.whl'
     wheel2 = wheel_path + 'simplewheel-2.0-py2.py3-none-any.whl'
-    assert install(wheel1) == 0
+    try:
+        assert install(wheel1) == 0
+    except EnvironmentError:
+        assert install(wheel1, user=True) == 0
     import simplewheel  # noqa: F401
-    assert install(wheel2) == 0
+    with pytest.warns(UserWarning):
+        try:
+            assert install(wheel2) == 0
+        except EnvironmentError:
+            assert install(wheel2, user=True) == 0
+
+
+def test_progress_already_loaded_warning():
+    # Proof of concept; requires internet connection
+    try:
+        install('progress==1.4')
+    except EnvironmentError:
+        install('progress==1.4', user=True)
+    import progress  # noqa: F401
+    with pytest.warns(UserWarning):
+        try:
+            install('progress', upgrade=True)
+        except EnvironmentError:
+            install('progress', user=True, upgrade=True)
+
+
+def test_progress_already_loaded_warning_upgradeTrue():
+    # Proof of concept; requires internet connection
+    try:
+        install('progress==1.4')
+    except EnvironmentError:
+        install('progress==1.4', user=True)
+    import progress  # noqa: F401
+    with pytest.warns(UserWarning):
+        try:
+            install('progress', upgrade=True)
+        except EnvironmentError:
+            install('progress', user=True, upgrade=True)
